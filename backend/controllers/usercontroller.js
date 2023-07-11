@@ -3,6 +3,8 @@ const catchAsyncErrors=require("../middleware/catchAsyncErrors");
 const User=require("../models/userModel");
 const sendToken = require("../utils/jwtToken");
 const sendEmail = require("../utils/sendEmail");
+const crypto = require("crypto");
+
 //register a user 
 exports.registerUser = catchAsyncErrors( async(req,res,next)=>{
     const {name,email,password}=req.body;
@@ -84,3 +86,70 @@ exports.forgotPassword = catchAsyncErrors(async(req,res,next)=>{
         return next(new ErrorHander(error.message,500));
     }
 }) ;
+
+// reset password
+exports.resetPassword = catchAsyncErrors(async(req,res,next)=>{
+const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");  
+    const user= await User.findOne({
+        resetPasswordToken,
+        resetPasswordExpire:{ $gt:Date.now()},
+    });
+    if(!user){
+        return next(new ErrorHander("Reset Password TOken is invalid or has been expired",400));
+
+
+    }
+    if(req.body.password!==req.body.confirmPassword){
+        return next(new ErrorHander("Reset Password TOken is invalid or has been expired",400));
+
+
+    }
+    user.password=req.body.password;
+    user.resetPasswordToken = undefined;
+     user.resetPasswordExpire=undefined;
+     await user.save();
+     sendToken(user,200,res);
+
+});
+// get user detail
+exports.getUserDetails = catchAsyncErrors(async(req,res,next)=>{
+    const user = await User.findById(req.user.id);
+    res.status(200).json({
+        success:true,
+        user,
+    });
+});
+//update user password 
+exports.updatePassword = catchAsyncErrors(async(req,res,next)=>{
+    const user = await User.findById(req.user.id).select("+password");
+    const isPasswordMatched = await user.comparePassword(req.body.oldPassword);
+    if(!isPasswordMatched){
+        return next(new ErrorHander("old passwprd is incorrect",400));
+    }
+    if(req.body.newPassword !== req.body.confirmPassword){
+        return next(new ErrorHander("password doesnot match",400));
+    }
+    user.password = req.body.newPassword;
+
+   await user.save();
+   sendToken(user,200,res);
+});
+//update user profile
+exports.updateProfile = catchAsyncErrors(async(req,res,next)=>{
+   const newUserData ={
+    name:req.body.name,
+    email:req.body.email,
+   };
+   //we will add cloudinary later
+   const user = await User.findByIdAndUpdate(req.user.id,newUserData,{
+    new:true,
+    runValidators:true,
+    useFindAndModify:false,
+   });
+   res.status(200).json({
+    success:true,
+   });
+});
