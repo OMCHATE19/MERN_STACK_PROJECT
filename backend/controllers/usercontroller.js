@@ -153,3 +153,84 @@ exports.updateProfile = catchAsyncErrors(async(req,res,next)=>{
     success:true,
    });
 });
+//get all users 
+exports.getAllUser = catchAsyncErrors(async(req,res,next)=>{
+    const users =await User.find();
+    res.status(200).json({
+        success: true,
+        users,
+    });
+});
+   //get single users 
+exports.getSingleUser = catchAsyncErrors(async(req,res,next)=>{
+    const user =await User.findById(req.params.id);
+    if(!user){
+        return next(
+            new ErrorHander(`User doesnot exist with id:${req.params.id}`)
+        );
+    }
+    res.status(200).json({
+        success: true,
+        user,
+    });
+});
+//update user profile
+exports.updateProfile = catchAsyncErrors(async(req,res,next)=>{
+    const newUserData ={
+     name:req.body.name,
+     email:req.body.email,
+     role:req.body.role, 
+    };
+    //we will add cloudinary later
+    const user = await User.findByIdAndUpdate(req.user.id,newUserData,{
+     new:true,
+     runValidators:true,
+     useFindAndModify:false,
+    });
+    res.status(200).json({
+     success:true,
+    });
+ });
+ //update user role
+exports.updateRole = catchAsyncErrors(async(req,res,next)=>{
+    const newUserData ={
+     name:req.body.name,
+     email:req.body.email,
+     role:req.body.role, 
+    };
+   
+    //we will add cloudinary later
+    const user = await User.findByIdAndUpdate(req.params.id,newUserData,{
+     new:true,
+     runValidators:true,
+     useFindAndModify:false,
+    });
+    if(!user){
+        return next(
+            new ErrorHander(`user doesnot exist with id:${req.params.id}`)
+        );
+    }
+    res.status(200).json({
+     success:true,
+    });
+ });
+
+ exports.deleteUser = catchAsyncErrors(async(req,res,next)=>{
+    
+    //we will add cloudinary later
+    const user = await User.findById(req.params.id);
+    if(!user){
+        return next(
+            new ErrorHander(`user doesnot exist with id:${req.params.id}`)
+        );
+    }
+    await user.deleteOne();
+     
+    res.status(200).json({
+     success:true,
+    });
+ });
+
+   
+
+
